@@ -623,30 +623,7 @@ def rm_picos(xml): #retrieves a list of PICO (i.e. comparison) titles
         val_comparison(title)
         
 
-        intxml = comparisons[c].getElementsByTagName('GROUP_LABEL_1')
-        if len(intxml) > 0:
-            try:
-                intname = intxml[0].firstChild.data
-            except:
-                print "SKIPPED COMPARISON" # bug in XML here - need to make better solution
-                picolist.append(tabtag(tag(("Comparison skipped from Revman file here"), "h3")))
-                picolist.append(tabtag(("In tests, this was due to errors in the original file where the authors have incorrectly filled in the intervention field.")))
-                continue
-                
-        else:
-            intname = "NO INTERVENTION FOUND"
-        try: 
-            cntxml = comparisons[c].getElementsByTagName('GROUP_LABEL_2')
-        except:
-            print "SKIPPED COMPARISON" # bug in XML here - need to make better solution
-            picolist.append(tabtag(tag(("Comparison skipped from Revman file here"), "h3")))
-            picolist.append(tabtag(("In tests, this was due to errors in the original file where the authors have incorrectly filled in the control field.")))
-
         
-        if len(cntxml) > 0:
-            cntname = cntxml[0].firstChild.data
-        else:
-            intname = "NO CONTROL FOUND"
         
         
         
@@ -667,7 +644,36 @@ def rm_picos(xml): #retrieves a list of PICO (i.e. comparison) titles
         #print outcomes, outcomes2
         
         for o in range(len(outcomes)):
-        
+            intxml = outcomes[o].getElementsByTagName('GROUP_LABEL_1')
+            if len(intxml) > 0:
+                try:
+                    intname = intxml[0].firstChild.data
+                except:
+                    print "SKIPPED COMPARISON" # bug in XML here - need to make better solution
+                    picolist.append(tabtag(tag(("Comparison skipped from Revman file here"), "h3")))
+                    picolist.append(tabtag(("In tests, this was due to errors in the original file where the authors have incorrectly filled in the intervention field.")))
+                    continue
+                    
+            else:
+                intname = "NO INTERVENTION FOUND"
+            try: 
+                cntxml = outcomes[o].getElementsByTagName('GROUP_LABEL_2')
+            except:
+                print "SKIPPED COMPARISON" # bug in XML here - need to make better solution
+                picolist.append(tabtag(tag(("Comparison skipped from Revman file here"), "h3")))
+                picolist.append(tabtag(("In tests, this was due to errors in the original file where the authors have incorrectly filled in the control field.")))
+
+            
+            if len(cntxml) > 0:
+                cntname = cntxml[0].firstChild.data
+            else:
+                intname = "NO CONTROL FOUND"
+
+
+
+            
+
+
             
             participants_shown_attr = outcomes[o].attributes.get("SHOW_PARTICIPANTS")
             if participants_shown_attr and participants_shown_attr.value == "NO":
@@ -854,7 +860,7 @@ def get_file_list():
     
     
 def main():
-    files = glob.glob(pt["rev"] + "CD003584*.rm5")
+    files = glob.glob(pt["rev"] + "*.rm5")
     #nofiles = len(files)    
     
     
