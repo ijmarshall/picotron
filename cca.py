@@ -1,5 +1,5 @@
 #
-# Cochrane PICOs
+# PICOtron
 #
 
 import glob
@@ -100,10 +100,10 @@ patterns = [[
 "In people with cndname, what are the benefits and harms of intname?",
 "How does intname affect outcomes in people with cndname?",
 "In people with cndname, how does intname affect outcomes?",
-"Does intname improve outcomes in people with cndname?",
-"In people with cndname, does intname improve outcomes?",
-"Is there evidence to support the use of intname in people with cndname?",
-"In people with cndname, is there evidence to support the use of intname?"],
+# "Does intname improve outcomes in people with cndname?",
+# "In people with cndname, does intname improve outcomes?",
+"Is there randomized controlled trial evidence to support the use of intname in people with cndname?",
+"In people with cndname, is there randomized controlled trial evidence to support the use of intname?"],
 
 ["What are the effects of intname in popname with cndname?",
 "In popname with cndname, what are the effects of intname?",
@@ -111,10 +111,10 @@ patterns = [[
 "In popname with cndname, what are the benefits and harms of intname?",
 "How does intname affect outcomes in popname with cndname?",
 "In popname with cndname, how does intname affect outcomes?",
-"Does intname improve outcomes in popname with cndname?",
-"In popname with cndname, does intname improve outcomes?",
-"Is there evidence to support the use of intname in popname with cndname?",
-"In popname with cndname, is there evidence to support the use of intname?"],
+# "Does intname improve outcomes in popname with cndname?",
+# "In popname with cndname, does intname improve outcomes?",
+"Is there randomized controlled trial evidence to support the use of intname in popname with cndname?",
+"In popname with cndname, is there randomized controlled trial evidence to support the use of intname?"],
 
 ["What are the effects of intname versus cntname in people with cndname?", 
 "In people with cndname, what are the effects of intname versus cntname?",
@@ -122,10 +122,10 @@ patterns = [[
 "In people with cndname, what are the benefits and harms of intname versus cntname?",
 "How does intname compare with cntname at improving outcomes in people with cndname?",
 "In people with cndname, how does intname compare with cntname at improving outcomes?",
-"Which treatment is most effective at improving outcomes in people with cndname: intname or cntname?",
-"In people with cndname, which treatment is most effective at improving outcomes: intname or cntname?",
-"Is there evidence to support the use of intname instead of cntname in people with cndname?",
-"In people with cndname, is there evidence to support the use of intname instead of cntname?"],
+# "Which treatment is most effective at improving outcomes in people with cndname: intname or cntname?",
+# "In people with cndname, which treatment is most effective at improving outcomes: intname or cntname?",
+"Is there randomized controlled trial evidence to support the use of intname instead of cntname in people with cndname?",
+"In people with cndname, is there randomized controlled trial evidence to support the use of intname instead of cntname?"],
 
 ["What are the effects of intname versus cntname in popname with cndname?", 
 "In popname with cndname, what are the effects of intname versus cntname?",
@@ -133,10 +133,10 @@ patterns = [[
 "In popname with cndname, what are the benefits and harms of intname versus cntname?",
 "How does intname compare with cntname at improving outcomes in popname with cndname?",
 "In popname with cndname, how does intname compare with cntname at improving outcomes?",
-"Which treatment is most effective at improving outcomes in popname with cndname: intname or cntname?",
-"In popname with cndname, which treatment is most effective at improving outcomes: intname or cntname?",
-"Is there evidence to support the use of intname instead of cntname in popname with cndname?",
-"In popname with cndname, is there evidence to support the use of intname instead of cntname?"]
+# "Which treatment is most effective at improving outcomes in popname with cndname: intname or cntname?",
+# "In popname with cndname, which treatment is most effective at improving outcomes: intname or cntname?",
+"Is there randomized controlled trial evidence to support the use of intname instead of cntname in popname with cndname?",
+"In popname with cndname, is there randomized controlled trial evidence to support the use of intname instead of cntname?"]
 ]
 
 
