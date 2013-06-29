@@ -33,9 +33,9 @@ pt = {} # path variables
 pt["code"] = ""
 #pt["docs"] = "../doc/"
 pt["op"] = "output/"
-#pt["rev"] = "../../../data/allreview2013/"
 
-pt["rev"] = "/Users/iain/Code/data/cdsr/"
+pt["rev"] = "input/"
+# pt["rev"] = "/Users/iain/Code/data/cdsr/"
 
 
 
