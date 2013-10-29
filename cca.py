@@ -34,8 +34,8 @@ pt["code"] = ""
 #pt["docs"] = "../doc/"
 pt["op"] = "output/"
 
-pt["rev"] = "input/"
-# pt["rev"] = "/Users/iain/Code/data/cdsr/"
+# pt["rev"] = "input/"
+pt["rev"] = "/Users/iain/Code/data/cdsr2013/"
 
 
 
@@ -50,41 +50,41 @@ sver = "24"
 htmlheader = """
 <html>
 
-	<head>
-		<title></title>
-		<meta name="GENERATOR" CONTENT="Cochrane Clinical Answers generator">
-		<meta http-equiv="content-type" content="text/html; charset="utf-8">
-		<style type="text/css">
-		<!--
-			body { font-family: Calibri, Arial; font-size: 10pt;}
-			h1, h3, h4 { font-family: Calibri, Arial;}
-			h1 { color: #394F91;}
-			p { font-size: 10pt;}
-			h3 { font-size: 12pt;}
-			h4 { font-size: 10pt;}
-			ul, li { font-size: 10pt;}
-			table { border-collapse: collapse; border-style: solid; border-color: #444444; border-width: 1px; width:100%;}
-			td, th { vertical-align: top; height: 100%; border-color: #444444; border-style: solid; border-width: 1px;}
+    <head>
+        <title></title>
+        <meta name="GENERATOR" CONTENT="Cochrane Clinical Answers generator">
+        <meta http-equiv="content-type" content="text/html; charset="utf-8">
+        <style type="text/css">
+        <!--
+            body { font-family: Calibri, Arial; font-size: 10pt;}
+            h1, h3, h4 { font-family: Calibri, Arial;}
+            h1 { color: #394F91;}
+            p { font-size: 10pt;}
+            h3 { font-size: 12pt;}
+            h4 { font-size: 10pt;}
+            ul, li { font-size: 10pt;}
+            table { border-collapse: collapse; border-style: solid; border-color: #444444; border-width: 1px; width:100%;}
+            td, th { vertical-align: top; height: 100%; border-color: #444444; border-style: solid; border-width: 1px;}
             .leftcol {width:200px;}
-			.compiler {color: #0096FF;}
+            .compiler {color: #0096FF;}
             .edittext {color: #0096FF;}
-		-->
-		</style>
-	</head>
-	<body>
+        -->
+        </style>
+    </head>
+    <body>
 """
 
 tableheader = """
-		<table>
+        <table>
 """
 
 tablefooter = """
-		</table>
+        </table>
 """
 
 
 htmlfooter = """
-	</body>
+    </body>
 </html>
 """
 
@@ -368,7 +368,7 @@ def cntmeanparse(xml): # returns a weighted median (as decimal object) for contr
     return cntmean
 
 
-### FOR TESTING - INTERVENTION MEDIAN TO CHECK DIRECTION OF EFFECTS
+
 
 def intmeanparse(xml): # returns a weighted median (as decimal object) for control group mean from an xml.dom object containing continuous outcome
 
@@ -816,9 +816,9 @@ def datecode(): # top of file date/time/compiler options stamp
     return "PICO generator v" + sver + "; text complied @ " + d_s + "; compiler comments " + ccom_s 
 
 def tag(contents, tag, cls = ""): # returns content html tagged, and indented 2x tabs
-	if cls is not "":
-		cls = ' class="' + cls + '"'
-	return "\t\t<" + tag + cls + ">" + contents + "</" + tag + ">"
+    if cls is not "":
+        cls = ' class="' + cls + '"'
+    return "\t\t<" + tag + cls + ">" + contents + "</" + tag + ">"
 
 def tabtag(x, y = "", celltag = "td"): # returns a one or two headed table row, with option to make different tag (i.e. th)
 
@@ -832,7 +832,6 @@ def tabtag(x, y = "", celltag = "td"): # returns a one or two headed table row, 
 
 def writefile(filename, txt):
 
-    
     #soup = BeautifulSoup(txt)
     op = codecs.open(filename, 'wb', 'utf-8')
     #op.write(soup.prettify())
@@ -842,13 +841,11 @@ def writefile(filename, txt):
 
 def get_file_list():
     with open("files_todo.txt", 'rb') as f:
-        #cd_nos = f.read().splitlines()
         cd_nos = f.read().splitlines()
     print pt["rev"]
-    
     files = []
     
-    for i in cd_nos:#[:20]:# remove [:20] for full list
+    for i in cd_nos:
         
         try:
             print pt["rev"] + i + "*.rm5"
@@ -979,8 +976,7 @@ def main():
         except:
             print "error, file %s not done" % (files[c], )
             not_done.append(files[c])
-         
-    
+
     with open('not_done_log.txt', 'wb') as not_done_f:
         not_done_f.write("\n".join(not_done))
     print ""
