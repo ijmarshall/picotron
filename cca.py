@@ -1,58 +1,63 @@
 #
-# PICOtron
+#        PICOtron
+#        ========
 #
+#   converts all intervention reviews from input folder
+#   to html documents in output folder
+#
+#
+
 
 import glob
 from xml.dom import minidom
 from datetime import datetime
 import codecs
-from bs4 import BeautifulSoup
+from BeautifulSoup import BeautifulSoup
 from decimal import *
 import os
 import re
 import random
 import collections
 import codecs
+import progressbar
+from csv import DictReader
 
 
 
-#constants
-
-pt = {} # path variables
-
-#
-# commented out windows directories
-#
-
-#pt["code"] = "c:\\code\\cca\\py\\"
-#pt["docs"] = "c:\\code\\cca\\doc\\"
-#pt["op"] = "c:\\code\\cca\\op2\\"
-#pt["rev"] = "c:\\code\\cca\\allreviews\\"
-
-
-pt["code"] = ""
-#pt["docs"] = "../doc/"
-pt["op"] = "output/"
-
-# pt["rev"] = "input/"
-pt["rev"] = "/Users/iain/Code/data/cdsr2013/"
+# *** CONSTANTS ***
 
 
 
 
+# TODO!! add to to assess this automatically 
+# need to have constant denominator across whole CCA
+# dependant on whether *any* analyses have an AR < 1 in 100
+DENOMINATOR = 1000 # 100 is default; 1000 in rare cases where small ARs
 
-ccom = False # display compiler comments
 
-abs_if_sig_only = True #display absolute numbers only where significant result
 
-sver = "24"
 
-htmlheader = """
+# path variables
+PATH = {}
+# PATH["rev"] = "/Users/iain/Code/data/cdsr2014-03/"  # input directory
+PATH["rev"] = "input/"  # input directory
+PATH["op"] = "output/" # output directory
+PATH["csv"] = "input/"
+
+# PATH["www"] = "www/" # used for testing html output
+
+DISPLAY_COMMENTS = False # display compiler comments
+ABS_IF_SIG_ONLY = True # display absolute numbers only where significant result
+PICOTRON_VERSION = "25"
+
+
+# templates
+HTML_HEADER = """
 <html>
 
     <head>
         <title></title>
-        <meta name="GENERATOR" CONTENT="Cochrane Clinical Answers generator">
+        <meta name="GENERATOR" CONTENT="the PICOtron">
         <meta http-equiv="content-type" content="text/html; charset="utf-8">
         <style type="text/css">
         <!--
@@ -74,34 +79,34 @@ htmlheader = """
     <body>
 """
 
-tableheader = """
+TABLE_HEADER = """
         <table>
 """
 
-tablefooter = """
+TABLE_FOOTER = """
         </table>
 """
 
 
-htmlfooter = """
+HTML_FOOTER = """
     </body>
 </html>
 """
 
-intro = """
+INTRO = """
  PICO generator
 """
 
 
-patterns = [[
+QUESTION_PATTERNS = [[
 "What are the effects of intname in people with cndname?",
 "In people with cndname, what are the effects of intname?",
 "What are the benefits and harms of intname in people with cndname?",
 "In people with cndname, what are the benefits and harms of intname?",
 "How does intname affect outcomes in people with cndname?",
 "In people with cndname, how does intname affect outcomes?",
-# "Does intname improve outcomes in people with cndname?",
-# "In people with cndname, does intname improve outcomes?",
+# "Does intname improve outcomes in people with cndname?", # removed at request CEU
+# "In people with cndname, does intname improve outcomes?", # removed at request CEU
 "Is there randomized controlled trial evidence to support the use of intname in people with cndname?",
 "In people with cndname, is there randomized controlled trial evidence to support the use of intname?"],
 
@@ -111,8 +116,8 @@ patterns = [[
 "In popname with cndname, what are the benefits and harms of intname?",
 "How does intname affect outcomes in popname with cndname?",
 "In popname with cndname, how does intname affect outcomes?",
-# "Does intname improve outcomes in popname with cndname?",
-# "In popname with cndname, does intname improve outcomes?",
+# "Does intname improve outcomes in popname with cndname?", # removed at request CEU
+# "In popname with cndname, does intname improve outcomes?", 
 "Is there randomized controlled trial evidence to support the use of intname in popname with cndname?",
 "In popname with cndname, is there randomized controlled trial evidence to support the use of intname?"],
 
@@ -140,33 +145,72 @@ patterns = [[
 ]
 
 
-unitdict = {"MD": "mean difference", "SMD": "standardised mean difference", "PETO_OR": "Peto OR", "RELATIVE RISK": "RR", "ODDS RATIO": "OR", "RISK RATIO": "RR"}
-wordnumdict = {"1": "one", "2": "two", "3": "three", "4": "four", "5": "five", "6": "six", "7": "seven", "8": "eight", "9": "nine", "10": "ten"}
-vowels = "aeiou"
-consonants = "bcdfghjklmnpqrstvwxyz"
+# vocabulary
 
-capitalignore = ["VAS", "VAS.", "NSAID", "LABA", "ICS", "PEF", "FEV", "RCT", "TCC", "FEV1"]
+UNIT_DICT = {"MD": "mean difference", "SMD": "standardised mean difference", "PETO_OR": "Peto OR", "RELATIVE RISK": "RR", "ODDS RATIO": "OR", "RISK RATIO": "RR"}
+WORD_NUM_DICT = {"1": "one", "2": "two", "3": "three", "4": "four", "5": "five", "6": "six", "7": "seven", "8": "eight", "9": "nine", "10": "ten"}
+ORDINAL_NUM_DICT = {"1": "first", "2": "second", "3": "third", "4": "fourth", "5": "fifth", "6": "sixth", "7": "seventh", "8": "eighth", "9": "ninth", "10": "tenth", "11": "eleventh", "12": "twelfth"}
+ORDINAL_ENDING_DICT = {"1": "st", "2": "nd", "3": "rd"}
 
-monthnames = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"]
+VOWELS = "aeiou"
+CONSONANTS = "bcdfghjklmnpqrstvwxyz"
 
-errorlog = []
+DONT_CONVERT_TO_LOWER = ["VAS", "VAS.", "NSAID", "LABA", "ICS", "PEF", "FEV", "RCT", "TCC", "FEV1"]
 
-def convPc(f): # returns string with percentage to 1 decimal place
-    f=round(f,1)
-    return str(f)+"%"
+MONTH_NAMES = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"]
+
+ERROR_LOG = []
+
+
+
+
+
+# *** FUNCTIONS FOR PARSING THE BROWSE MENU ***
+
+def get_topic_filename():
+    """
+    returns filename for the 'browse menu' spreadsheet
+    should be stored as csv in the input folder
+    """
+    path = PATH["csv"] + 'topics/'
+    files = glob.glob(path + '*.csv')
+    files.sort()
+    return files[-1]
+
+
+def parse_topics(filename):
+    " takes a csv file, parses, and returns a dict of sets of top level headings (in case more than one) "
+    topic_lookup = collections.defaultdict(set)
+
+    with open(filename, 'rU') as f:
+        csv_file = DictReader(f, dialect='excel')
+        for line in csv_file:
+            topic_lookup[line["CD Number"]].add(line["Level 1"])
+
+    return topic_lookup
+
+
+# *** FUNCTIONS FOR SIMPLE LANGUAGE PARSING ***
 
 def numberword(noun, number):
+    " returns an appropriately pluralised word with the formatted number in front "
     number = str(number)
     if number == "0":
         return "no " + pluralise(noun)
     elif number == "1":
         return "one " + noun
-    elif number in wordnumdict:
-        return wordnumdict[number] + " " + pluralise(noun)
+    elif number in WORD_NUM_DICT:
+        return WORD_NUM_DICT[number] + " " + pluralise(noun)
     else:
         return number + " " + pluralise(noun)
+        
+def ordinalnumber(number):
+    " gets ordinal number in words from integer "
+    number = str(number)
+    return ORDINAL_NUM_DICT.get(number, "%d%s" % (number, ORDINAL_ENDING_DICT.get(number[-1], "th")))
 
 def pluralise(word):
+    " rule-based generation of plurals from a single word as a string "
     wordl = word.lower()
     
     if wordl[-1:] in ["s", "x", "o"] or wordl[-2:] in ["ch", "sh"]:
@@ -175,28 +219,33 @@ def pluralise(word):
         return word [:-1] + "ves"
     elif wordl[-2:] == "fe":
         return word [:-2] + "ves"
-    elif wordl[-1:] == "y" and wordl[-2:-1] not in vowels:
+    elif wordl[-1:] == "y" and wordl[-2:-1] not in VOWELS:
         return word[:-1] + "ies"
     else:
         return word + "s"
 
-def midsent(txt): #capitalises as if mid sentence
+def mid_sent(txt): 
+    " capitalises a word when mid_sentence "
     words = txt.split(' ')
     op = []
     for word in words:
-        if word in capitalignore:
+        if word in DONT_CONVERT_TO_LOWER:
             op.append(word)
         else:
             op.append(word.lower())
     return " ".join(op)
 
-def startsent(txt): #capitalises for start of sentence
+def start_sent(txt):
+    " capitalises for start of sentence "
     return txt[0].upper() + txt[1:]
 
 
-def favours_parser(favours_pre): # checks if Forest plot labels are in predictable form, then changes to editorial preferred sentence "in favour of..."
-    # return error if string < 7 characters
-    
+def favours_parser(favours_pre):
+    """
+    checks if Forest plot labels are in predictable form, then changes to editorial preferred sentence "in favour of..."
+    generates error if string < 7 characters
+    """
+
     lc = favours_pre.lower()
     
     if "control" in lc or "experimental" in lc or "treatment" in lc or "intervention" in lc:
@@ -213,11 +262,16 @@ def favours_parser(favours_pre): # checks if Forest plot labels are in predictab
         return "<span class='edittext'>ALERT! - expected Forest plot key to start with 'favors', instead found - '" + favours_pre + "' - please add text 'in favor of [favored intervention]'</span>"
     
 
-#
-#   revman parsing functions
-#
 
-def xmltagcontents(xml, tag, silentfail = False): # returns inside contents of xml of first instance of a tag (use for unique tag ids)
+# *** XML HELPER FUNCTIONS ***
+
+
+def xml_tag_contents(xml, tag, silentfail = False): 
+    """
+     gets first instance of an xml tag (use for unique tag ids)
+     and returns contents formatted as string
+     or html error message
+    """
 
     els = xml.getElementsByTagName(tag)
 
@@ -229,7 +283,12 @@ def xmltagcontents(xml, tag, silentfail = False): # returns inside contents of x
         else:
             return None
 
-def getElement(xml, tag, silentfail = False):
+def xml_attribute_contents(xml, tag, silentfail = False):
+    """
+    gets an attribute of an xml tag (use for unique tag ids)
+    and returns contents formatted as string
+    or html error message
+    """
     try:
         r = xml.attributes[tag].value
     except:
@@ -239,55 +298,96 @@ def getElement(xml, tag, silentfail = False):
             r = None
     return r
 
-def ocparse(xml, checkfav = True): # takes xml.dom object containing a dichotomous or continuous outcome, returns tuple of values, or None if not estimible
+def rm_is_intervention_review(xml):
+    " returns True for intervention reviews only "
+    cr = xml.getElementsByTagName('COCHRANE_REVIEW')
+    review_type=cr[0].attributes['TYPE'].value
+    return review_type == 'INTERVENTION'
 
-    name = xmltagcontents(xml, 'NAME')
+
+def ocparse(xml, checkfav = True): 
+    "takes xml.dom object containing a dichotomous or continuous outcome, returns tuple of values, or None if not estimible"
+
+    name = xml_tag_contents(xml, 'NAME') # analysis name
 
     if checkfav:
-        favours1 = xmltagcontents(xml, 'GRAPH_LABEL_1')
-        favours2 = xmltagcontents(xml, 'GRAPH_LABEL_2')
+        # find which intervention is favoured by examining forest plot labels
+        # (since some outcomes better increased, some better reduced)
+        favours1 = xml_tag_contents(xml, 'GRAPH_LABEL_1')
+        favours2 = xml_tag_contents(xml, 'GRAPH_LABEL_2')
     else:
         favours1 = ""
         favours2 = ""
 
     studies=xml.attributes['STUDIES'].value
+    octype = xml.nodeName # Dichotomous, Continuous, or IV
 
-    octype = xml.nodeName
-
+    units = xml_attribute_contents(xml, "EFFECT_MEASURE", silentfail = True)
+    if units == None:
+        try:
+            units = xml.getElementsByTagName("EFFECT_MEASURE")[0].firstChild.data
+        except:
+            units = "No units found"
 
     if xml.attributes['ESTIMABLE'].value == "NO":
-        return (None, name, None, None, None, None, None, None, studies, None, None, None)
+        # where there is *no* meta-analysis, just individual study reports
+
+        ind_study_data=[i for i in xml.childNodes if i.nodeName in ["DICH_DATA", "CONT_DATA"]]
+
+        no_studies = len(ind_study_data)
+
+        if no_studies == 1:
+            # where there is only one study, report the results from this
+            # in the standard way
+            point = Decimal(xml_attribute_contents(ind_study_data[0], 'EFFECT_SIZE'))
+            ci95low = Decimal(xml_attribute_contents(ind_study_data[0], 'CI_START'))
+            ci95up = Decimal(xml_attribute_contents(ind_study_data[0], 'CI_END'))
+            totalInt = xml_attribute_contents(ind_study_data[0], 'TOTAL_1')
+            totalCnt = xml_attribute_contents(ind_study_data[0], 'TOTAL_2')
+            studies = xml_attribute_contents(xml, 'STUDIES')
+            usetotal = xml_attribute_contents(ind_study_data[0], 'TOTALS')
+            subgroups = xml_attribute_contents(xml, 'SUBGROUPS')
+        else:
+            if no_studies > 1:
+                # for more than one study; output results of individual studies
+                study_text = singlestudiesparse(ind_study_data, units)
+            else:
+                # for analyses with no studies
+                study_text = "no individual studies reported for this analysis (there may be subgroups)."            
+
+            subgroups = xml_attribute_contents(xml, 'SUBGROUPS')
+                        
+            return (None, name, units, None, None, None, favours1, favours2, studies, None, None, subgroups, study_text)
     else:
-        units = getElement(xml, "EFFECT_MEASURE", silentfail = True)
-        if units == None:
-#            units = xmltagcontents(xml, "EFFECT_MEASURE")
-            try:
-                units = xml.getElementsByTagName("EFFECT_MEASURE")[0].firstChild.data
-            except:
-                units = "No units found"
-
-        point = Decimal(getElement(xml, 'EFFECT_SIZE'))
-        ci95low = Decimal(getElement(xml, 'CI_START'))
-        ci95up = Decimal(getElement(xml, 'CI_END'))
-        totalInt=getElement(xml, 'TOTAL_1')
-        totalCnt=getElement(xml, 'TOTAL_2')
-        studies=getElement(xml, 'STUDIES')
-        usetotal=getElement(xml, 'TOTALS')       
-        subgroups=getElement(xml, 'SUBGROUPS')       
+        # where there is a meta-analysis get these results
+        point = Decimal(xml_attribute_contents(xml, 'EFFECT_SIZE'))
+        ci95low = Decimal(xml_attribute_contents(xml, 'CI_START'))
+        ci95up = Decimal(xml_attribute_contents(xml, 'CI_END'))
+        totalInt=xml_attribute_contents(xml, 'TOTAL_1')
+        totalCnt=xml_attribute_contents(xml, 'TOTAL_2')
+        studies=xml_attribute_contents(xml, 'STUDIES')
+        usetotal=xml_attribute_contents(xml, 'TOTALS')       
+        subgroups=xml_attribute_contents(xml, 'SUBGROUPS')      
 
 
-        participants=int(totalInt)+int(totalCnt)
-        if units.upper() in unitdict:
-            units = unitdict[units.upper()]
+    participants=int(totalInt)+int(totalCnt) # total participants (in both arms)
 
+    if units.upper() in UNIT_DICT: # standardise units
+        units = UNIT_DICT[units.upper()]
 
-
-
-    return (octype, name, units, point, ci95low, ci95up, favours1, favours2, studies, participants, usetotal, subgroups)
+    return (octype, name, units, point, ci95low, ci95up, favours1, favours2, studies, participants, usetotal, subgroups, None)
 
 
 def ier(cer, units, point):
-    
+    """
+    input:
+        cer = absolute risk with control (calculated; from 0 to 1)
+        units = RR/OR etc as string
+        point = relative risk with intervention (direct from meta-analysis)
+    output:
+        absolute risk with intervention
+        OR None if units not understood
+    """
     if units[-2:] == "RR":
         return cer * point
     elif units[-2:] == "OR":
@@ -297,12 +397,41 @@ def ier(cer, units, point):
         return None
 
 def natfreq (risk, denom):
-    return str((risk * denom).quantize(Decimal("1"))) + " per " + str(denom) + " people"
+    """
+    converts an absolute risk (from 0 to 1)
+    to natural frequencies (1 in 100 etc.)
+    outputs as string
+    """
+    return natfreq_nodenom(risk, denom) + " per " + str(denom) + " people"
     
 def natfreq_nodenom (risk, denom):
+    """
+    gets numerator for natural frequency calculation
+    """
     return str((risk * denom).quantize(Decimal("1")))
 
-def cerparse(xml): # returns a weighted median (as decimal object) for CER from an xml.dom object containing dichotomous outcome
+
+def singlestudiesparse(studies, units):
+    " returns a simple fomatted string containing the results of individual studies for when there is no meta-analysis "
+    output = []
+
+    for i, study in enumerate(studies):
+
+        ci95up = Decimal(study.attributes['CI_END'].value)
+        ci95low = Decimal(study.attributes['CI_START'].value)
+        point = Decimal(study.attributes['EFFECT_SIZE'].value)
+        
+        output.append("Study %d: %s %.2f, 95 CI %.2f to %.2f" % (i+1, units, point, ci95low, ci95up))
+
+    return "; ".join(output)
+        
+
+
+def cerparse(xml):
+    """
+    returns a weighted median (as decimal object) of the control absolute risks in the analysis
+    weighted by population size
+    """
 
     data = xml.getElementsByTagName('DICH_DATA')
 
@@ -332,135 +461,184 @@ def cerparse(xml): # returns a weighted median (as decimal object) for CER from 
             cer = study_cer
         counter += total
     
-    
-    
     return cer
 
 
-def cntmeanparse(xml): # returns a weighted median (as decimal object) for control group mean from an xml.dom object containing continuous outcome
+#####
+##
+##  FUNCTIONS NO LONGER USED FOR ESTIMATING ABSOLUTE EFFECTS FROM CONTINUOUS OUTCOMES
+##
+#####
 
-    data = xml.getElementsByTagName('CONT_DATA')
 
-    studydata = []
-    total = 0
+# def cntmeanparse(xml):
+#   """
+#   returns a weighted median (as decimal object) for control group mean from an xml.dom object containing continuous outcomes
+#   weighted by population size
+#   """
+#   ####
+#   ## NO LONGER USED!
+#   ####
 
-    for datum in data:
-        cnt_m = Decimal(datum.attributes['MEAN_2'].value)
-        int_d = Decimal(datum.attributes['TOTAL_1'].value)
-        cnt_d = Decimal(datum.attributes['TOTAL_2'].value)
+#     data = xml.getElementsByTagName('CONT_DATA')
 
-        studydata.append((cnt_m, int_d + cnt_d)) # then add to a list
-        total += (int_d + cnt_d) # and the total population for weighting purpose
+#     studydata = []
+#     total = 0
+
+#     for datum in data:
+#         cnt_m = Decimal(datum.attributes['MEAN_2'].value)
+#         int_d = Decimal(datum.attributes['TOTAL_1'].value)
+#         cnt_d = Decimal(datum.attributes['TOTAL_2'].value)
+
+#         studydata.append((cnt_m, int_d + cnt_d)) # then add to a list
+#         total += (int_d + cnt_d) # and the total population for weighting purpose
         
-    studydata = sorted(studydata)
+#     studydata = sorted(studydata)
 
-    midpoint = total / 2 # find the midpoint of the studies weighted by size
+#     midpoint = total / 2 # find the midpoint of the studies weighted by size
 
-    cntmean = None
-    counter = 0
+#     cntmean = None
+#     counter = 0
 
-    for (study_cntmean, total) in studydata: #then run through again, stopping when pass the midway point
+#     for (study_cntmean, total) in studydata: #then run through again, stopping when pass the midway point
 
-        if (counter < midpoint):
-            cntmean = study_cntmean
-        counter += total
+#         if (counter < midpoint):
+#             cntmean = study_cntmean
+#         counter += total
    
-    return cntmean
+#     return cntmean
 
 
 
 
-def intmeanparse(xml): # returns a weighted median (as decimal object) for control group mean from an xml.dom object containing continuous outcome
+# def intmeanparse(xml):
+#   """
+#   returns a weighted median (as decimal object) for control group mean from an xml.dom object containing continuous outcome
+#   """
 
-    data = xml.getElementsByTagName('CONT_DATA')
+#   ####
+#   ## NO LONGER USED!
+#   ####
 
-    studydata = []
-    total = 0
+#     data = xml.getElementsByTagName('CONT_DATA')
 
-    for datum in data:
-        int_m = Decimal(datum.attributes['MEAN_1'].value)
-        cnt_m = Decimal(datum.attributes['MEAN_2'].value)
-        int_d = Decimal(datum.attributes['TOTAL_1'].value)
-        cnt_d = Decimal(datum.attributes['TOTAL_2'].value)
+#     studydata = []
+#     total = 0
 
-        studydata.append((cnt_m, int_m, total)) # then add to a list
-        total += (int_d + cnt_d) # and the total population for weighting purpose
+#     for datum in data:
+#         int_m = Decimal(datum.attributes['MEAN_1'].value)
+#         cnt_m = Decimal(datum.attributes['MEAN_2'].value)
+#         int_d = Decimal(datum.attributes['TOTAL_1'].value)
+#         cnt_d = Decimal(datum.attributes['TOTAL_2'].value)
+
+#         studydata.append((cnt_m, int_m, total)) # then add to a list
+#         total += (int_d + cnt_d) # and the total population for weighting purpose
         
-    studydata = sorted(studydata)
+#     studydata = sorted(studydata)
 
-    midpoint = total / 2 # find the midpoint of the studies weighted by size
+#     midpoint = total / 2 # find the midpoint of the studies weighted by size
 
-    intmean = None
+#     intmean = None
 
-    for (study_cntmean, study_intmean, total) in studydata: #then run through again, stopping when pass the midway point
+#     for (study_cntmean, study_intmean, total) in studydata: #then run through again, stopping when pass the midway point
 
-        if (total < midpoint):
-            intmean = study_intmean
+#         if (total < midpoint):
+#             intmean = study_intmean
    
-    return intmean
+#     return intmean
 
 
+# def int_mean(cer_mean, dif):
+#   """
+#   estimates mean differences given these values
+#   """
+#   ####
+#   ## NO LONGER USED!
+#   ####
+#     return (cer_mean + dif).quantize(Decimal('.01'))
+
+        
+        
+# def rm_mean_values(octype, intname, cntname, name, units, point, ci95low, ci95up, studies, participants, xml): # returns nice bit of absolute value text for an xml.dom obj, (dich outcome)
+#   ####
+#   ## NO LONGER USED!
+#   ####
+
+#     cutoff = 0 
+
+#     if (Decimal(ci95low) < cutoff) and (Decimal(ci95up) > cutoff) and ABS_IF_SIG_ONLY:
+    
+#         aresult = "There was no statistically significant difference between groups."
+#     else:
+    
+#         cntmean = cntmeanparse(xml)
+#         intmean = int_mean(cntmean, point)
+#         meanci95low = int_mean(cntmean, ci95low)
+#         meanci95up = int_mean(cntmean, ci95up)
+
+        
+#         aresult =  str(intmean) + " (between " + str(meanci95low) + " and " + str(meanci95up) + ") with " + mid_sent(intname) + " compared with " + str(cntmean) + " with " + mid_sent(cntname) + "."
 
 
-def rm_abs_values(octype, intname, cntname, name, units, point, ci95low, ci95up, studies, participants, xml): # returns nice bit of absolute value text for an xml.dom obj, (dich outcome)
+        
+#     return aresult
 
 
-    if units[-1] == "R" or units.upper()[-10:] == "RATE RATIO":
+def rm_abs_values(octype, intname, cntname, name, units, point, ci95low, ci95up, studies, participants, xml):
+    """
+    returns absolute value text for an xml.dom obj, (dich outcome)
+    """
+
+    # set significance cutoff
+    if units[-1] == "R" or units.upper()[-10:] == "RATE RATIO": 
         cutoff = 1
     else:
         cutoff = 0
 
-    if (Decimal(ci95low) < cutoff) and (Decimal(ci95up) > cutoff) and abs_if_sig_only:
+
+
+    if (Decimal(ci95low) == 0) and (Decimal(point) == 0) and (Decimal(ci95up) == 0):
+        # error from malformed RM5 - authors not completed fields
+        aresult = "ERROR - No absolute result possible since effect size and 95% CI set to 0."
+    elif (Decimal(ci95low) < cutoff) and (Decimal(ci95up) > cutoff) and ABS_IF_SIG_ONLY:
+        # result is not significant
         aresult = "There was no statistically significant difference between groups."
     else:
-    
+        # result is significant
         
-        abcer = cerparse(xml)
-        
+        # calculate absolute risks and 95% CIs for intervention group
+        abcer = cerparse(xml)   
         abier = ier(abcer, units, point)
         
         abci95low = ier(abcer, units, ci95low)
         abci95up = ier(abcer, units, ci95up)
 
-        aresult =  natfreq(abier, 100) + " (95% CI " + natfreq_nodenom(abci95low, 100) + " to " + natfreq_nodenom(abci95up, 100) + ") with " + midsent(intname) + " compared with " + natfreq(abcer ,100) + " with " + midsent(cntname) + "."
-        
-        #aresult =  natfreq(abier, 100) + " (between " + natfreq_nodenom(abci95low, 100) + " and " + natfreq_nodenom(abci95up, 100) + ") with " + midsent(intname) + " compared with " + natfreq(abcer ,100) + " with " + midsent(cntname)  pre change 2
+
+        # NO LONGER REQUIRED - need to have constant denominator across whole CCA
+        # dependant on whether *any* analyses have an AR < 1 in 100
+        #
+        # give absolute frequencies out of 1000 if fewer than 1 in 100 in either group
+        # if (0 < abcer < 0.01) or (0 < abier < 0.01): 
+        #     denom = 1000
+        # else:
+        #     denom = 100
+
+        # TODO!! - add code to choose a CCA-wide denominator - for now is constant
+        denom = DENOMINATOR # change based on what is needed
+
+        aresult =  natfreq(abier, denom) + " (95% CI " + natfreq_nodenom(abci95low, denom) + " to " + natfreq_nodenom(abci95up, denom) + ") with " + mid_sent(intname) + " compared with " + natfreq(abcer ,denom) + " with " + mid_sent(cntname) + "."
+       
          
     return aresult
 
 
-def int_mean(cer_mean, dif): # estimates mean differences given these values
-    return (cer_mean + dif).quantize(Decimal('.01'))
-
-        
-        
-def rm_mean_values(octype, intname, cntname, name, units, point, ci95low, ci95up, studies, participants, xml): # returns nice bit of absolute value text for an xml.dom obj, (dich outcome)
-
-    cutoff = 0 
-
-    if (Decimal(ci95low) < cutoff) and (Decimal(ci95up) > cutoff) and abs_if_sig_only:
-    
-        aresult = "There was no statistically significant difference between groups."
-    else:
-    
-        cntmean = cntmeanparse(xml)
-        intmean = int_mean(cntmean, point)
-        meanci95low = int_mean(cntmean, ci95low)
-        meanci95up = int_mean(cntmean, ci95up)
 
 
-        #aresult = str(cntmean) + " with " + midsent(cntname) + " compared with " + str(intmean) + " with " + midsent(intname) + " (95% CI " + str(meanci95low) + " to " + str(meanci95up) + ")"
-                
-        #aresult =  + " with " + midsent(intname) + " (95% CI " +  + " to " +  + ")" + " compared with " +  + " with " + midsent(cntname) 
-        
-        aresult =  str(intmean) + " (between " + str(meanci95low) + " and " + str(meanci95up) + ") with " + midsent(intname) + " compared with " + str(cntmean) + " with " + midsent(cntname) + "."
-
-
-        
-    return aresult
-
-
-def rm_unique(xml): #retrieves unique identifier => string
+def rm_unique(xml):
+    """ attempts to get CD number from XML (parses from DOI string) """
+    ###
+    # TODO can get CD number reliably from XML filename
+    ###
     cr = xml.getElementsByTagName('COCHRANE_REVIEW')
     doi = cr[0].attributes['DOI'].value
     doi_l = doi.split('.')
@@ -472,20 +650,24 @@ def rm_unique(xml): #retrieves unique identifier => string
 
 
 
-def rm_title(xml): #retrieves title => string
+def rm_title(xml):
+    " retrieves review title => string "
     cover = xml.getElementsByTagName('COVER_SHEET')
     title = cover[0].getElementsByTagName('TITLE')
     t = title[0].firstChild.data
+
+    # OLD CODE FOR GENERATING A QUESTION
     #t = t[0].lower() + t[1:]
     #return "What are the effects of " + t + "?" # previously converted to question, new version simply reports original title
+
     return t
     
     
 def splitter(n):
-
-    # first split into A and B removing the word ' for ' if present
-    # if no ' for ' always generates an error
-    
+    """
+    first split into A and B removing the word ' for ' if present
+    if no ' for ' always generates an error
+    """
     
     
     list1 = n.split(' for ')
@@ -519,9 +701,13 @@ def splitter(n):
 
     
 def randomquestion(intname, cntname, cndname, popname, patternno):
+    """
+    makes an arbitrary question from a simple parse of the review title
+    (not for publication - as a hint for editors to turn into proper English!)
+    """
    
     random.seed()
-    patternpointer = patterns[patternno]
+    patternpointer = QUESTION_PATTERNS[patternno]
     tmpind = random.randint(0, len(patternpointer) - 1)
 
     text = patternpointer[tmpind]
@@ -534,62 +720,67 @@ def randomquestion(intname, cntname, cndname, popname, patternno):
         
     if popname:
         text = re.sub("popname", popname, text) # sub the intervention for popname
-    
-    
-    
+        
     return  text
 
 
 
 def rm_overview_p(xml):
-    return xmltagcontents(xml, 'CRIT_PARTICIPANTS')
+    " get inclusion criteria for participants "
+    return xml_tag_contents(xml, 'CRIT_PARTICIPANTS')
 
     
 def rm_overview_i(xml):
-    return xmltagcontents(xml, 'CRIT_INTERVENTIONS')
+    " get inclusion criteria for interventions of interest "
+    return xml_tag_contents(xml, 'CRIT_INTERVENTIONS')
 
 
-def rm_summaryshort(xml): #retrieves a short summary (conclusion from the abstract), returns html tagged
-    return xmltagcontents(xml, 'ABS_CONCLUSIONS')
+def rm_summaryshort(xml):
+    "retrieves a short summary (conclusion from the abstract), returns html tagged"
+    return xml_tag_contents(xml, 'ABS_CONCLUSIONS')
     
 
-def rm_implications(xml): #retrieves the clinical implications, returns html tagged
-    return xmltagcontents(xml, 'IMPLICATIONS_PRACTICE')
+def rm_implications(xml):
+    "retrieves the clinical implications, returns html tagged"
+    return xml_tag_contents(xml, 'IMPLICATIONS_PRACTICE')
 
 
-def rm_summarylong(xml): #retrieves the clinical implications, returns html tagged
-    return xmltagcontents(xml, 'SUMMARY_BODY')
+def rm_summarylong(xml):
+    " retrieves the clinical implications, returns html tagged "
+    return xml_tag_contents(xml, 'SUMMARY_BODY')
 
-def rm_quality(xml): #retrieves the clinical implications, returns html tagged
-    return xmltagcontents(xml, 'QUALITY_OF_EVIDENCE')
+def rm_quality(xml):
+    " retrieves the clinical implications, returns html tagged"
+    return xml_tag_contents(xml, 'QUALITY_OF_EVIDENCE')
 
 
-def rm_outcomes(xml): #retrieves the clinical implications, returns html tagged
-    return xmltagcontents(xml, 'CRIT_OUTCOMES')
+def rm_outcomes(xml):
+    " retrieves the clinical implications, returns html tagged"
+    return xml_tag_contents(xml, 'CRIT_OUTCOMES')
     
     
-def rm_searchdate(xml): # retrives the search date
-
+def rm_searchdate(xml):
+    " retrives the search date, parses and returns string "
     last_search = xml.getElementsByTagName('LAST_SEARCH')
     date = last_search[0].getElementsByTagName('DATE')
     year = date[0].attributes['YEAR'].value
     # sketched in code to retrieve month
     month = date[0].attributes['MONTH'].value
 
-    return "%s %s" % (monthnames[int(month)-1], year)
+    return "%s %s" % (MONTH_NAMES[int(month)-1], year)
 
 
 
-def rm_narrative(octype, intname, cntname, name, units, point, ci95low, ci95up, studies, participants, show_participants): # returns a CE style sentence from all this data
-
+def rm_narrative(octype, intname, cntname, name, units, point, ci95low, ci95up, studies, participants, show_participants):
+    " returns a Clinical Evidence style sentence from all this data "
     if units[-1] == "R" or units.upper()[-10:] == "RATE RATIO":
         cutoff = 1
     else:
         cutoff = 0
 
-    intname = midsent(intname)
-    cntname = midsent(cntname)
-    name = midsent(name)
+    intname = mid_sent(intname)
+    cntname = mid_sent(cntname)
+    name = mid_sent(name)
 
     if show_participants:
         participants_str = "with %s participants" % (participants,)
@@ -597,83 +788,75 @@ def rm_narrative(octype, intname, cntname, name, units, point, ci95low, ci95up, 
         participants_str = "(number of participants not available)"
 
 
-    if (Decimal(ci95low) < cutoff) and (Decimal(ci95up) > cutoff):
-        nresult = "%s %s found no statistically significant difference between groups." % (startsent(numberword("RCT", int(studies))), participants_str)
+
+    if (Decimal(ci95low) == 0) and (Decimal(point) == 0) and (Decimal(ci95up) == 0):
+        nresult = "ERROR - no narrative result possible since effect size and 95% CI set to 0."
+        # ERROR_LOG.append("Narrative result error - please see below")
+        # print "NR ERROR"
+    elif (Decimal(ci95low) < cutoff) and (Decimal(ci95up) > cutoff):
+        nresult = "%s %s found no statistically significant difference between groups." % (start_sent(numberword("RCT", int(studies))), participants_str)
     elif (Decimal(ci95low) < cutoff) and (Decimal(ci95up) < cutoff):
-        nresult = "%s %s found that %s reduced %s compared with %s." % (startsent(numberword("RCT", int(studies))), participants_str, intname, name, cntname)
+        nresult = "%s %s found that %s reduced %s compared with %s." % (start_sent(numberword("RCT", int(studies))), participants_str, intname, name, cntname)
     elif (Decimal(ci95low) > cutoff) and (Decimal(ci95up) > cutoff):
-        nresult = "%s %s found that %s increased %s compared with %s." % (startsent(numberword("RCT", int(studies))), participants_str, intname, name, cntname)
+        nresult = "%s %s found that %s increased %s compared with %s." % (start_sent(numberword("RCT", int(studies))), participants_str, intname, name, cntname)
+    else:
+        print "ERROR - unexpected XML contents in this review"
     return nresult
 
 
-def rm_picos(xml): #retrieves a list of PICO (i.e. comparison) titles
+def rm_picos(xml):
+    """
+    MAIN LOOP
+
+    takes in xml at comparison level
+    parses and returns as HTML
+
+    """
+
     picolist = []
     comparisons = xml.getElementsByTagName('COMPARISON')
     cdno =  rm_unique(xml)
     searchdate = rm_searchdate(xml)
 
     for c in range(len(comparisons)):
-        titlexml = comparisons[c].getElementsByTagName('NAME')
-        title = titlexml[0].firstChild.data
-        
-        
-        c_no = getElement(comparisons[c], "NO")
-        
+        titlexml = comparisons[c].getElementsByTagName('NAME') 
+        title = titlexml[0].firstChild.data # comparison title
 
-        val_comparison(title)
-        
+        c_no = xml_attribute_contents(comparisons[c], "NO") # comparison index
 
-        
-        
-        
-        
+
         picolist.append(tabtag(tag("Comparison ", "h3"), tag(title, "h3")))
 
-        
         picolist.append(tabtag("Population", " "))
         picolist.append(tabtag("Intervention", " "))
         picolist.append(tabtag("Comparator", " "))
         picolist.append(tabtag("Safety alerts", " "))
 
-#        outcomes=comparisons[c].getElementsByTagName('DICH_OUTCOME') + comparisons[c].getElementsByTagName('CONT_OUTCOME') + comparisons[c].getElementsByTagName('IV_OUTCOME') 
-        
         outcomes=[i for i in comparisons[c].childNodes if i.nodeName in ["DICH_OUTCOME", "CONT_OUTCOME", "IV_OUTCOME"]]
-        
-        
-        #print len(outcomes), len(outcomes2)
-        #print outcomes, outcomes2
-        
+
         for o in range(len(outcomes)):
             intxml = outcomes[o].getElementsByTagName('GROUP_LABEL_1')
             if len(intxml) > 0:
                 try:
                     intname = intxml[0].firstChild.data
                 except:
-                    print "SKIPPED COMPARISON" # bug in XML here - need to make better solution
                     picolist.append(tabtag(tag(("Comparison skipped from Revman file here"), "h3")))
-                    picolist.append(tabtag(("In tests, this was due to errors in the original file where the authors have incorrectly filled in the intervention field.")))
+                    picolist.append(tabtag(("In tests, this was due to errors in the original file where the authors have incompletely filled in the intervention field.")))
                     continue
-                    
+
             else:
                 intname = "NO INTERVENTION FOUND"
             try: 
                 cntxml = outcomes[o].getElementsByTagName('GROUP_LABEL_2')
             except:
-                print "SKIPPED COMPARISON" # bug in XML here - need to make better solution
                 picolist.append(tabtag(tag(("Comparison skipped from Revman file here"), "h3")))
-                picolist.append(tabtag(("In tests, this was due to errors in the original file where the authors have incorrectly filled in the control field.")))
+                picolist.append(tabtag(("In tests, this was due to errors in the original file where the authors have incompletely filled in the control field.")))
 
             
             if len(cntxml) > 0:
                 cntname = cntxml[0].firstChild.data
             else:
                 intname = "NO CONTROL FOUND"
-
-
-
-            
-
-
             
             participants_shown_attr = outcomes[o].attributes.get("SHOW_PARTICIPANTS")
             if participants_shown_attr and participants_shown_attr.value == "NO":
@@ -683,13 +866,14 @@ def rm_picos(xml): #retrieves a list of PICO (i.e. comparison) titles
 
             data = ocparse(outcomes[o])
             
+            o_no = xml_attribute_contents(outcomes[o], "NO")
             
-            o_no = getElement(outcomes[o], "NO")
-            
-            (octype, name, units, point, ci95low, ci95up, favours1, favours2, studies, participants, usetotal, subgroupspresent) = data
+            (octype, name, units, point, ci95low, ci95up, favours1, favours2, studies, participants, usetotal, subgroupspresent, study_text) = data
             ocstr = "%s.%s" % (c_no, o_no)
             octitle = ("Outcome %s" % (ocstr, ))
-            picolist += rm_dataparse(title, octitle, octype, name, intname, cntname, units, point, ci95low, ci95up, favours1, favours2, studies, participants, show_participants, usetotal, outcomes[o], cdno, ocstr, searchdate)
+
+
+            picolist += rm_dataparse(title, octitle, octype, name, intname, cntname, units, point, ci95low, ci95up, favours1, favours2, studies, participants, show_participants, usetotal, outcomes[o], cdno, ocstr, searchdate, study_text)
 
             if subgroupspresent == "YES":
                 subgroups = outcomes[o].getElementsByTagName('DICH_SUBGROUP') + outcomes[o].getElementsByTagName('CONT_SUBGROUP') + outcomes[o].getElementsByTagName('IV_SUBGROUP') 
@@ -701,21 +885,24 @@ def rm_picos(xml): #retrieves a list of PICO (i.e. comparison) titles
                     else:
                         show_participants = True
 
-                    s_no = getElement(subgroups[s], "NO")
+                    s_no = xml_attribute_contents(subgroups[s], "NO")
                 
                     data = ocparse(subgroups[s], checkfav = False) #want to use the existing favours string
-                    (octype, sgname, dummy0, point, ci95low, ci95up, dummy1, dummy2, studies, participants, usetotal, dummy3) = data #slight hack, assigning favours to dummystring, subgroups, and units
+                    (octype, sgname, dummy0, point, ci95low, ci95up, dummy1, dummy2, studies, participants, usetotal, dummy3, study_text) = data #slight hack, assigning favours to dummystring, subgroups, and units
                     ocstr = "%s.%s.%s" % (c_no, o_no, s_no)
                     octitle = ("Outcome (subgroup) %s" % (ocstr,))
-                    picolist += rm_dataparse(title, octitle, octype, name, intname, cntname, units, point, ci95low, ci95up, favours1, favours2, studies, participants, show_participants, usetotal, subgroups[s], cdno, ocstr, searchdate, sgname)
+                    picolist += rm_dataparse(title, octitle, octype, name, intname, cntname, units, point, ci95low, ci95up, favours1, favours2, studies, participants, show_participants, usetotal, subgroups[s], cdno, ocstr, searchdate, study_text, sgname)
     return picolist
 
 
-def rm_dataparse(title, octitle, octype, name, intname, cntname, units, point, ci95low, ci95up, favours1, favours2, studies, participants, show_participants, usetotal, xml, cdno, ocstr, searchdate, sgname = None):
-
-    
+def rm_dataparse(title, octitle, octype, name, intname, cntname, units, point, ci95low, ci95up, favours1, favours2, studies, participants, show_participants, usetotal, xml, cdno, ocstr, searchdate, study_text, sgname = None):
+    """
+    take statistical data
+    parse, and output as CCA text
+    """
 
     if sgname:
+        # indicate whether this is a subgroup
         sgname = name + " - [subgroup: " + sgname + "]"
     else:
         sgname = name
@@ -724,18 +911,18 @@ def rm_dataparse(title, octitle, octype, name, intname, cntname, units, point, c
     picolist.append(tabtag(tag(octitle, "h4"), tag(sgname, "h4")))
 
     if usetotal == "SUB":
-
+        # no overall meta-analysis; subgroups only will be reported in CCA (as in original review)
         picolist.append(tabtag(tag("Analysed by subgroup only", "h4")))
 
     else:
-
+        # yes - there is an overall meta-analysis
         if studies == "0":
-            nresult = "We found no studies meeting our criteria which assessed the effect of " + midsent(title) + " on " + midsent(name)
+            nresult = "We found no studies meeting our criteria which assessed the effect of " + mid_sent(title) + " on " + mid_sent(name)
             qresult = "n/a"
             abresult = "n/a"
         elif type(point) == type(None):
-            nresult = "Not estimable"
-            qresult = "The relative effect/mean difference cannot be calculated as data were not meta-analysed."
+            nresult = "No narrative result is available for this analysis. (The analysis includes multiple studies but no meta-analysis was conducted.)"
+            qresult = "The results from individual studies were: " + study_text + "; Forest plot details: " + cdno + " Analysis " + ocstr
             abresult = "The absolute effect in each group cannot be calculated as data were not meta-analysed."
         else:
             nresult = rm_narrative(octype, intname, cntname, name, units, point, ci95low, ci95up, studies, participants, show_participants)
@@ -745,8 +932,6 @@ def rm_dataparse(title, octitle, octype, name, intname, cntname, units, point, c
                 abresult = " "
             elif units[-1] == "R" or units.upper()[-10:] == "RATE RATIO":
                 abresult = rm_abs_values(octype, intname, cntname, name, units, point, ci95low, ci95up, studies, participants, xml)
-            #elif units.lower() == "mean difference": # not needed at present
-            #    abresult = rm_mean_values(octype, intname, cntname, name, units, point, ci95low, ci95up, studies, participants, xml)
             else:
                 abresult = "The absolute effect in each group cannot be calculated using " + units + " from this analysis"
                 
@@ -766,8 +951,8 @@ def rm_dataparse(title, octitle, octype, name, intname, cntname, units, point, c
             qresult = favours + " (" + units + " " + str(point.quantize(Decimal('.01'))) + ", 95% CI " + str(ci95low.quantize(Decimal('.01'))) + " to " + str(ci95up.quantize(Decimal('.01'))) + "). Forest plot details: " + cdno + " Analysis " + ocstr
 
         picolist.append(tabtag("Narrative result", nresult))
-        picolist.append(tabtag("Risk of bias of studies", " "))
-        picolist.append(tabtag("Quality of the evidence", " "))
+        picolist.append(tabtag("Risk of bias of studies", "The reviewers did not perform a GRADE assessment of the quality of the evidence. Overall the studies in the systematic review were at [] risk of bias."))
+        picolist.append(tabtag("Quality of the evidence", "The reviewers performed a GRADE assessment of the quality of evidence for this outcome at this time point and stated that the evidence was [] quality. See Summary of findings from Cochrane review"))
         picolist.append(tabtag("Quantitative result: relative effect or mean difference", qresult))
         
         picolist.append(tabtag("Quantitative result: absolute effect", abresult))
@@ -776,12 +961,19 @@ def rm_dataparse(title, octitle, octype, name, intname, cntname, units, point, c
     return picolist
 
 
+
+
+
+
 #
 # data validation functions
 #
 
-def val_comparison(txt): #check comparisons, return true or false
-    #check 1 - does it have v, versus, or vs?
+def val_comparison(txt):
+    """
+    check comparisons, return true or false
+    check 1 - does it have v, versus, or vs?
+    """
     vcheck = False
 
     for v in [" v ", " v. ", " vs ", " vs. ", " versus "]:
@@ -789,38 +981,53 @@ def val_comparison(txt): #check comparisons, return true or false
             vcheck = True
 
     if not vcheck:
-        errorlog.append("Outcome name without intervention and control")
+        ERROR_LOG.append("Outcome name without intervention and control")
     return vcheck
      
 #
 #   output functions
 #
 
-def outputfile(inputfile): # returns output filename from input filename (same name with txt extension moved to op directory)
-    #return pt["op"] + inputfile.split('\\')[-1][:-3] + "doc"
-    return pt["op"] + ('').join(inputfile.split('/')[-2:])[:-3] + "doc"# TODO change to doc
+def outputfile(inputfile):
+    """
+    returns output filename from input filename (same name with txt extension moved to op directory)
+    """
+
+    return PATH["op"] + ('').join(inputfile.split('/')[-1:])[:-3] + "doc"
 
 
-def htmlfile(inputfile): # returns output filename from input filename (same name with txt extension moved to op directory)
-    return pt["www"] + inputfile.split('/')[-1][:-3] + "html"
+def htmlfile(inputfile):
+    """
+    returns output filename from input filename (same name with txt extension moved to op directory)
+    """
+    return PATH["www"] + inputfile.split('/')[-1][:-3] + "html"
 
 
 
-def datecode(): # top of file date/time/compiler options stamp
-    if ccom:
+def datecode():
+    """
+    top of file date/time/compiler options stamp
+    """
+    if DISPLAY_COMMENTS:
         ccom_s = "ON"
     else:
         ccom_s = "OFF"
     d = datetime.now()
     d_s = d.strftime('%d-%m-%y - %H:%M:%S')
-    return "PICO generator v" + sver + "; text complied @ " + d_s + "; compiler comments " + ccom_s 
+    return "PICO generator v" + PICOTRON_VERSION + "; text complied @ " + d_s + "; compiler comments " + ccom_s 
 
-def tag(contents, tag, cls = ""): # returns content html tagged, and indented 2x tabs
+def tag(contents, tag, cls = ""):
+    """
+    returns content html tagged, and indented 2x tabs (for ease of reading output)
+    """
     if cls is not "":
         cls = ' class="' + cls + '"'
     return "\t\t<" + tag + cls + ">" + contents + "</" + tag + ">"
 
-def tabtag(x, y = "", celltag = "td"): # returns a one or two headed table row, with option to make different tag (i.e. th)
+def tabtag(x, y = "", celltag = "td"):
+    """
+    returns a one or two headed table row, with option to make different tag (i.e. th)
+    """
 
     if y == "":
         colspan = ' colspan = 2'
@@ -831,25 +1038,29 @@ def tabtag(x, y = "", celltag = "td"): # returns a one or two headed table row, 
     return "\t\t\t<tr>" + x + y + "</tr>"
 
 def writefile(filename, txt):
-
-    #soup = BeautifulSoup(txt)
+    """
+    write output as unicode
+    """
     op = codecs.open(filename, 'wb', 'utf-8')
-    #op.write(soup.prettify())
     op.write(txt)
     op.close()
 
 
 def get_file_list():
+    """
+    reads from a todo list of files to parse
+    """
+    ###
+    ## NOT USED - CURRENTLY PARSING ALL FILES
+    ###
+
     with open("files_todo.txt", 'rb') as f:
         cd_nos = f.read().splitlines()
-    print pt["rev"]
     files = []
     
-    for i in cd_nos:
-        
+    for i in cd_nos:    
         try:
-            print pt["rev"] + i + "*.rm5"
-            files.append(glob.glob(pt["rev"] + i + "*.rm5")[0])
+            files.append(glob.glob(PATH["rev"] + i + "*.rm5")[0])
         except:
             print "Requested CD number: " + i + " not found"
     
@@ -857,16 +1068,13 @@ def get_file_list():
     
     
 def main():
-    files = glob.glob(pt["rev"] + "*.rm5")
-    #nofiles = len(files)    
+    files = glob.glob(PATH["rev"] + "*.rm5") # get all reviews
+    topic_lookup = parse_topics(get_topic_filename())
     
-    
+    os.system("clear")
+    print INTRO
     
 
-    os.system("clear")
-    print intro
-    
-    #files = get_file_list()
     
     nofiles = len(files)    
     nofiles_u = len(set(files))    
@@ -878,25 +1086,31 @@ def main():
     if duplicates:
         print "The following duplicates were found ", ",".join(duplicates)
 
-    
     not_done = []
+
+    p = progressbar.ProgressBar(nofiles, timer=True)
     
     for c in range(nofiles):
+        p.tap()
         
-        try:
-            
+        try:    
+                
             f = files[c]
             
             op = []
             xmldoc = minidom.parse(f)
-            op.append(htmlheader)
+
+            if not rm_is_intervention_review(xmldoc): # only process intervention style reviews for the purposes of CCA
+                continue # = skip
+            
+            op.append(HTML_HEADER)
             op.append(tag("Cochrane Clinical Answers", "h3"))
             
-            
+           
                     
             q = rm_title(xmldoc)
             
-            (intname, cntname, cndname, popname, patternno) = splitter(midsent(q))
+            (intname, cntname, cndname, popname, patternno) = splitter(mid_sent(q))
             if intname:
                 qu = randomquestion(intname, cntname, cndname, popname, patternno)
             else:
@@ -905,12 +1119,15 @@ def main():
             op.append(tag(qu, "h1"))
             
             
-            op.append(tableheader)
+            op.append(TABLE_HEADER)
             
             cdno =  rm_unique(xmldoc)
             
-            op.append(tabtag(tag("Notes for authors from Cochrane Review " + cdno + " [not for publication]", "h3")))
-            print cdno
+            op.append(tabtag(tag("Notes to Associate Editor from Cochrane Review " + cdno + " [not for publication]", "h3")))
+            # print cdno
+
+            topic_headers = "; ".join(list(topic_lookup[cdno]))
+
             
             op.append(tabtag("Review title", q))
             
@@ -921,29 +1138,35 @@ def main():
             op.append(tabtag("Interventions<br/>(Methods > Criteria for considering studies for this review > Types of interventions)", rm_overview_i(xmldoc)))
             op.append(tabtag("Outcomes<br/>(Methods > Criteria for considering studies for this review > Types of outcome measures)", rm_outcomes(xmldoc)))
             op.append(tabtag("Risk of bias of studies<br/>(Results > Risk of bias in included studies)", rm_quality(xmldoc)))
-            op.append(tablefooter)
+            op.append(TABLE_FOOTER)
             
             
             op.append(tag(" ", "br"))
             
-            op.append(tableheader)
+            op.append(TABLE_HEADER)
             op.append(tabtag(tag("CCA number", "h4"), " "))
             op.append(tabtag(tag("DOI", "h4"), " "))
-            op.append(tablefooter)
+            op.append(TABLE_FOOTER)
             
             op.append(tag(" ", "br"))
             
             
-            op.append(tableheader)
+            op.append(TABLE_HEADER)
             op.append(tabtag(tag("Clinical question", "h4"), qu))
             op.append(tabtag("Clinical answer", " "))
-            op.append(tabtag("Abstract", "<p></p><p></p>"))
-            op.append(tabtag("Keywords", " "))
-            op.append(tabtag("Subject (1)", " "))
+            op.append(tabtag("Abstract", "This Cochrane Clinical Answer evaluates %s in people with %s." % (intname, cndname)))
+
+            # no longer needed
+            # op.append(tabtag("Keywords", " "))
+
+            op.append(tabtag("Subject (1)", topic_headers))
             op.append(tabtag("Subject (2)", " "))
             op.append(tabtag("Subject (3)", " "))
-            op.append(tabtag("MeSH codes", " "))
-            op.append(tablefooter)
+
+            # no longer needed
+            # op.append(tabtag("MeSH codes", " "))
+            
+            op.append(TABLE_FOOTER)
             
             
             op.append(tag(" ", "br"))
@@ -952,27 +1175,27 @@ def main():
             op.append("!/!/!/!/COMPILER!/!/!/!/")
             
             
-            op.append(tableheader)
+            op.append(TABLE_HEADER)
             op.append(tabtag(tag("PICOS", "h3")))
             op += rm_picos(xmldoc)
-            op.append(tablefooter)        
-    
-    
-            op.append(htmlfooter)
-    
-    
+            op.append(TABLE_FOOTER)        
+
+
+            op.append(HTML_FOOTER)
+
+
             # add in error log if compiler comments = True
             ccom_index = op.index("!/!/!/!/COMPILER!/!/!/!/")
-    
-            if ccom:
-                for e in range(len(errorlog)):
-                    errorlog[e] = tag(errorlog[e], "p", "compiler")
-                op = op[:ccom_index] + errorlog + op [ccom_index + 1:]
+
+            if DISPLAY_COMMENTS:
+                for e in range(len(ERROR_LOG)):
+                    ERROR_LOG[e] = tag(ERROR_LOG[e], "p", "compiler")
+                op = op[:ccom_index] + ERROR_LOG + op [ccom_index + 1:]
             else:
                 op[ccom_index] = ""
         
             writefile(outputfile(f), '\n'.join(op))
-        
+
         except:
             print "error, file %s not done" % (files[c], )
             not_done.append(files[c])
