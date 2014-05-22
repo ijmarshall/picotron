@@ -951,7 +951,7 @@ def rm_dataparse(title, octitle, octype, name, intname, cntname, units, point, c
             qresult = favours + " (" + units + " " + str(point.quantize(Decimal('.01'))) + ", 95% CI " + str(ci95low.quantize(Decimal('.01'))) + " to " + str(ci95up.quantize(Decimal('.01'))) + "). Forest plot details: " + cdno + " Analysis " + ocstr
 
         picolist.append(tabtag("Narrative result", nresult))
-        picolist.append(tabtag("Risk of bias of studies", "The reviewers did not perform a GRADE assessment of the quality of the evidence. Overall the studies in the systematic review were at [] risk of bias."))
+        picolist.append(tabtag("Risk of bias of studies", "The reviewers did not perform a GRADE assessment of the quality of the evidence. In this analysis 1/1 (%) of the studies were at high or unclear risk of selection bias, having failed to report adequate allocation concealment and/or random sequence generation processes, 1/1 (%) were at high or unclear risk of detection bias as they were not blinded and 1/1 (%) were at high or unclear risk of attrition bias having failed to report outcome data for all randomized participants; no other selection, detection or attrition bias was reported."))
         picolist.append(tabtag("Quality of the evidence", "The reviewers performed a GRADE assessment of the quality of evidence for this outcome at this time point and stated that the evidence was [] quality. See Summary of findings from Cochrane review"))
         picolist.append(tabtag("Quantitative result: relative effect or mean difference", qresult))
         
@@ -959,6 +959,7 @@ def rm_dataparse(title, octitle, octype, name, intname, cntname, units, point, c
         picolist.append(tabtag("Reference", cdno))
         picolist.append(tabtag("Search date", searchdate))
     return picolist
+
 
 
 
