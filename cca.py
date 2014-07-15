@@ -39,8 +39,8 @@ DENOMINATOR = 1000 # 100 is default; 1000 in rare cases where small ARs
 
 # path variables
 PATH = {}
-# PATH["rev"] = "/Users/iain/Code/data/cdsr2014-03/"  # input directory
-PATH["rev"] = "input/"  # input directory
+PATH["rev"] = "/home/iain/Code/data/cdsr2014-07/"  # input directory
+# PATH["rev"] = "input/"  # input directory
 PATH["op"] = "output/" # output directory
 PATH["csv"] = "input/"
 
@@ -147,7 +147,7 @@ QUESTION_PATTERNS = [[
 
 # vocabulary
 
-UNIT_DICT = {"MD": "mean difference", "SMD": "standardised mean difference", "PETO_OR": "Peto OR", "RELATIVE RISK": "RR", "ODDS RATIO": "OR", "RISK RATIO": "RR"}
+UNIT_DICT = {"MD": "mean difference", "SMD": "standardised mean difference", "PETO_OR": "Peto OR", "RELATIVE RISK": "RR", "ODDS RATIO": "OR", "RISK RATIO": "RR", "HAZARD RATIO": "HR"}
 WORD_NUM_DICT = {"1": "one", "2": "two", "3": "three", "4": "four", "5": "five", "6": "six", "7": "seven", "8": "eight", "9": "nine", "10": "ten"}
 ORDINAL_NUM_DICT = {"1": "first", "2": "second", "3": "third", "4": "fourth", "5": "fifth", "6": "sixth", "7": "seventh", "8": "eighth", "9": "ninth", "10": "tenth", "11": "eleventh", "12": "twelfth"}
 ORDINAL_ENDING_DICT = {"1": "st", "2": "nd", "3": "rd"}
@@ -951,7 +951,7 @@ def rm_dataparse(title, octitle, octype, name, intname, cntname, units, point, c
             qresult = favours + " (" + units + " " + str(point.quantize(Decimal('.01'))) + ", 95% CI " + str(ci95low.quantize(Decimal('.01'))) + " to " + str(ci95up.quantize(Decimal('.01'))) + "). Forest plot details: " + cdno + " Analysis " + ocstr
 
         picolist.append(tabtag("Narrative result", nresult))
-        picolist.append(tabtag("Risk of bias of studies", "The reviewers did not perform a GRADE assessment of the quality of the evidence. In this analysis 1/1 (%) of the studies were at high or unclear risk of selection bias, having failed to report adequate allocation concealment and/or random sequence generation processes, 1/1 (%) were at high or unclear risk of detection bias as they were not blinded and 1/1 (%) were at high or unclear risk of attrition bias having failed to report outcome data for all randomized participants; no other selection, detection or attrition bias was reported."))
+        picolist.append(tabtag("Risk of bias of studies", "The reviewers did not perform a GRADE assessment of the quality of the evidence. In this analysis 1/1 (%) of the studies failed to report adequate allocation concealment and/or random sequence generation processes, 1/1 (%) did not report adequate blinding of participants/carers/outcome assessors and 1/1 (%) had high or unclear numbers of withdrawals."))
         picolist.append(tabtag("Quality of the evidence", "The reviewers performed a GRADE assessment of the quality of evidence for this outcome at this time point and stated that the evidence was [] quality. See Summary of findings from Cochrane review"))
         picolist.append(tabtag("Quantitative result: relative effect or mean difference", qresult))
         
