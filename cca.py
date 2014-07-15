@@ -48,7 +48,7 @@ PATH["csv"] = "input/"
 
 DISPLAY_COMMENTS = False # display compiler comments
 ABS_IF_SIG_ONLY = True # display absolute numbers only where significant result
-PICOTRON_VERSION = "25"
+PICOTRON_VERSION = "26"
 
 
 # templates
