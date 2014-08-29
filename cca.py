@@ -32,23 +32,23 @@ from csv import DictReader
 # TODO!! add to to assess this automatically 
 # need to have constant denominator across whole CCA
 # dependant on whether *any* analyses have an AR < 1 in 100
-DENOMINATOR = 1000 # 100 is default; 1000 in rare cases where small ARs
+DENOMINATOR = 100 # 100 is default; 1000 in rare cases where small ARs
 
 
 
 
 # path variables
 PATH = {}
-PATH["rev"] = "/home/iain/Code/data/cdsr2014-07/"  # input directory
-# PATH["rev"] = "input/"  # input directory
+# PATH["rev"] = "/users/iain/Code/data/cdsr2014-07/"  # input directory
+PATH["rev"] = "input/"  # input directory
 PATH["op"] = "output/" # output directory
 PATH["csv"] = "input/"
 
 # PATH["www"] = "www/" # used for testing html output
 
 DISPLAY_COMMENTS = False # display compiler comments
-ABS_IF_SIG_ONLY = True # display absolute numbers only where significant result
-PICOTRON_VERSION = "26"
+ABS_IF_SIG_ONLY = False # display absolute numbers only where significant result
+PICOTRON_VERSION = "27"
 
 
 # templates
