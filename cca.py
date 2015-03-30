@@ -32,15 +32,15 @@ from csv import DictReader
 # TODO!! add to to assess this automatically 
 # need to have constant denominator across whole CCA
 # dependant on whether *any* analyses have an AR < 1 in 100
-DENOMINATOR = 100 # 100 is default; 1000 in rare cases where small ARs
+DENOMINATOR = 1000 # 100 is default; 1000 in rare cases where small ARs
 
 
 
 
 # path variables
 PATH = {}
-# PATH["rev"] = "/users/iain/Code/data/cdsr2014-07/"  # input directory
-PATH["rev"] = "input/"  # input directory
+PATH["rev"] = "/users/iain/Code/data/cdsr2015-02b/"  # input directory
+# PATH["rev"] = "input/"  # input directory
 PATH["op"] = "output/" # output directory
 PATH["csv"] = "input/"
 
@@ -48,7 +48,7 @@ PATH["csv"] = "input/"
 
 DISPLAY_COMMENTS = False # display compiler comments
 ABS_IF_SIG_ONLY = False # display absolute numbers only where significant result
-PICOTRON_VERSION = "27"
+PICOTRON_VERSION = "28"
 
 
 # templates
@@ -832,7 +832,7 @@ def rm_picos(xml):
         picolist.append(tabtag("Comparator", " "))
         picolist.append(tabtag("Safety alerts", " "))
 
-        outcomes=[i for i in comparisons[c].childNodes if i.nodeName in ["DICH_OUTCOME", "CONT_OUTCOME", "IV_OUTCOME"]]
+        outcomes=[i for i in comparisons[c].childNodes if i.nodeName in ["DICH_OUTCOME", "CONT_OUTCOME", "IV_OUTCOME", "IPD_OUTCOME"]]
 
         for o in range(len(outcomes)):
             intxml = outcomes[o].getElementsByTagName('GROUP_LABEL_1')
@@ -876,7 +876,9 @@ def rm_picos(xml):
             picolist += rm_dataparse(title, octitle, octype, name, intname, cntname, units, point, ci95low, ci95up, favours1, favours2, studies, participants, show_participants, usetotal, outcomes[o], cdno, ocstr, searchdate, study_text)
 
             if subgroupspresent == "YES":
-                subgroups = outcomes[o].getElementsByTagName('DICH_SUBGROUP') + outcomes[o].getElementsByTagName('CONT_SUBGROUP') + outcomes[o].getElementsByTagName('IV_SUBGROUP') 
+                subgroups = outcomes[o].getElementsByTagName('DICH_SUBGROUP') + outcomes[o].getElementsByTagName('CONT_SUBGROUP') + outcomes[o].getElementsByTagName('IV_SUBGROUP') + outcomes[o].getElementsByTagName('IPD_SUBGROUP')
+
+                    
                 for s in range(len(subgroups)):
 
                     participants_shown_attr = outcomes[o].attributes.get("SHOW_PARTICIPANTS")
@@ -928,9 +930,11 @@ def rm_dataparse(title, octitle, octype, name, intname, cntname, units, point, c
             nresult = rm_narrative(octype, intname, cntname, name, units, point, ci95low, ci95up, studies, participants, show_participants)
             if xml.nodeName == "IV_OUTCOME" or xml.nodeName == "IV_SUBGROUP":
                 abresult = "The absolute effect in each group cannot be calculated using only the generic inverse variance data from this analysis."
+           # elif xml.nodeName == "IPD_OUTCOME" or xml.nodeName == "IPD_SUBGROUP":
+           #     abresult = "The absolute effect in each group cannot be calculated from time-to-event data (hazard ratios)."
             elif xml.nodeName == "CONT_OUTCOME" or xml.nodeName == "CONT_SUBGROUP": # new insertion - no longer want continuous o/cs calculated
                 abresult = " "
-            elif units[-1] == "R" or units.upper()[-10:] == "RATE RATIO":
+            elif units[-2:] == "OR" or units[-2:] == "RR" or units.upper()[-10:] == "RATE RATIO":
                 abresult = rm_abs_values(octype, intname, cntname, name, units, point, ci95low, ci95up, studies, participants, xml)
             else:
                 abresult = "The absolute effect in each group cannot be calculated using " + units + " from this analysis"
