@@ -17,3 +17,21 @@ To produce summaries, the *PICOtron* does the following:
 This software is used by the Cochrane Collaboration, and forms the basis of [Cochrane Clinical Answers](http://cochraneclinicalanswers.com), 
 
 contact: mail@ijmarshall.com
+
+Instructions
+------------
+
+1. Save the Revman input to the `input/` folder
+2. Export the topic map excel file to CSV format, also in the `input/` folder, saving under the name `topics.csv`
+3. From the command line, run `python cca.py`
+4. Wait for the timer to finish, then the output files will be in the `output/` directory
+5. If any files are not possible to process, an error will be displayed, and a log text file saved in the `output/` directory
+
+To update to latest version
+---------------------------
+
+Run `git pull` from the command line
+
+
+
+
