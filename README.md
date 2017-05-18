@@ -37,7 +37,7 @@ Instructions
 To 'commit' changes
 -------------------
 1. Type `git add ` followed by the file you have edited
-2. Type `git commit -m 'some description of change'`
+2. Type `git commit -m "some description of change"`
 3. Type `git push`
 
 
