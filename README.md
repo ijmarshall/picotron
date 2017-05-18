@@ -1,6 +1,12 @@
 the PICOtron
 ============
 
+To update to latest version
+---------------------------
+
+Run `git pull` from the command line
+
+
 Clinical answers from systematic reviews
 ----------------------------------------
 
@@ -27,10 +33,13 @@ Instructions
 4. Wait for the timer to finish, then the output files will be in the `output/` directory
 5. If any files are not possible to process, an error will be displayed, and a log text file saved in the `output/` directory
 
-To update to latest version
----------------------------
 
-Run `git pull` from the command line
+To 'commit' changes
+-------------------
+1. Type `git add ` followed by the file you have edited
+2. Type `git commit -m 'some description of change'`
+3. Type `git push`
+
 
 
 
