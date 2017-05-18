@@ -105,7 +105,7 @@ QUESTION_PATTERNS = [['What are the effects of intname in people with cndname?',
 
 # vocabulary
 
-UNIT_DICT = {"MD": "mean difference", "SMD": "standardised mean difference", "PETO_OR": "Peto OR", "RELATIVE RISK": "RR", "ODDS RATIO": "OR", "RISK RATIO": "RR", "HAZARD RATIO": "HR"}
+UNIT_DICT = {"MD": "mean difference", "SMD": "standardized mean difference", "PETO_OR": "Peto OR", "RELATIVE RISK": "RR", "ODDS RATIO": "OR", "RISK RATIO": "RR", "HAZARD RATIO": "HR"}
 WORD_NUM_DICT = {"1": "one", "2": "two", "3": "three", "4": "four", "5": "five", "6": "six", "7": "seven", "8": "eight", "9": "nine", "10": "ten"}
 ORDINAL_NUM_DICT = {"1": "first", "2": "second", "3": "third", "4": "fourth", "5": "fifth", "6": "sixth", "7": "seventh", "8": "eighth", "9": "ninth", "10": "tenth", "11": "eleventh", "12": "twelfth"}
 ORDINAL_ENDING_DICT = {"1": "st", "2": "nd", "3": "rd"}
