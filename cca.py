@@ -529,7 +529,7 @@ def cerparse(xml):
 #         meanci95up = int_mean(cntmean, ci95up)
 
 
-#         aresult =  str(intmean) + " (between " + str(meanci95low) + " and " + str(meanci95up) + ") with " + mid_sent(intname) + " compared with " + str(cntmean) + " with " + mid_sent(cntname) + "."
+#         aresult =  str(intmean) + " (between " + str(meanci95low) + " and " + str(meanci95up) + ") with " + mid_sent(intname) + " than with " + str(cntmean) + " with " + mid_sent(cntname) + "."
 
 
 
@@ -578,7 +578,7 @@ def rm_abs_values(octype, intname, cntname, name, units, point, ci95low, ci95up,
         # TODO!! - add code to choose a CCA-wide denominator - for now is constant
         denom = DENOMINATOR # change based on what is needed
 
-        aresult =  natfreq(abier, denom) + " (95% CI " + natfreq_nodenom(abci95low, denom) + " to " + natfreq_nodenom(abci95up, denom) + ") with " + mid_sent(intname) + " compared with " + natfreq(abcer ,denom) + " with " + mid_sent(cntname) + "."
+        aresult =  natfreq(abier, denom) + " (95% CI " + natfreq_nodenom(abci95low, denom) + " to " + natfreq_nodenom(abci95up, denom) + ") with " + mid_sent(intname) + " than with " + natfreq(abcer ,denom) + " with " + mid_sent(cntname) + "."
 
 
     return aresult
@@ -748,9 +748,9 @@ def rm_narrative(octype, intname, cntname, name, units, point, ci95low, ci95up, 
     elif (Decimal(ci95low) < cutoff) and (Decimal(ci95up) > cutoff):
         nresult = "%s %s found no statistically significant difference between groups." % (start_sent(numberword("RCT", int(studies))), participants_str)
     elif (Decimal(ci95low) < cutoff) and (Decimal(ci95up) < cutoff):
-        nresult = "%s %s found that fewer people had %s with %s compared with %s." % (start_sent(numberword("RCT", int(studies))), participants_str, name, intname , cntname)
+        nresult = "%s %s found that fewer people had %s with %s than with %s." % (start_sent(numberword("RCT", int(studies))), participants_str, name, intname , cntname)
     elif (Decimal(ci95low) > cutoff) and (Decimal(ci95up) > cutoff):
-        nresult = "%s %s found that more people had %s with %s compared with %s." % (start_sent(numberword("RCT", int(studies))), participants_str, name, intname, cntname)
+        nresult = "%s %s found that more people had %s with %s than with %s." % (start_sent(numberword("RCT", int(studies))), participants_str, name, intname, cntname)
     else:
         print "ERROR - unexpected XML contents in this review"
     return nresult
