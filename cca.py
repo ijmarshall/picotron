@@ -529,7 +529,7 @@ def cerparse(xml):
 #         meanci95up = int_mean(cntmean, ci95up)
 
 
-#         aresult =  str(intmean) + " (between " + str(meanci95low) + " and " + str(meanci95up) + ") with " + mid_sent(intname) + " compared with " + str(cntmean) + " with " + mid_sent(cntname) + "."
+#         aresult =  str(intmean) + " (between " + str(meanci95low) + " and " + str(meanci95up) + ") with " + mid_sent(intname) + " compared with " + str(cntmean) + " with " + mid_sent(cntname) + " (calculated using median event rate)."
 
 
 
@@ -578,7 +578,7 @@ def rm_abs_values(octype, intname, cntname, name, units, point, ci95low, ci95up,
         # TODO!! - add code to choose a CCA-wide denominator - for now is constant
         denom = DENOMINATOR # change based on what is needed
 
-        aresult =  natfreq(abier, denom) + " (95% CI " + natfreq_nodenom(abci95low, denom) + " to " + natfreq_nodenom(abci95up, denom) + ") with " + mid_sent(intname) + " compared with " + natfreq(abcer ,denom) + " with " + mid_sent(cntname) + "."
+        aresult =  natfreq(abier, denom) + " (95% CI " + natfreq_nodenom(abci95low, denom) + " to " + natfreq_nodenom(abci95up, denom) + ") with " + mid_sent(intname) + " compared with " + natfreq(abcer ,denom) + " with " + mid_sent(cntname) + " (calculated using median event rate)."
 
 
     return aresult
@@ -907,8 +907,8 @@ def rm_dataparse(title, octitle, octype, name, intname, cntname, units, point, c
             qresult = favours + " (" + units + " " + str(point.quantize(Decimal('.01'))) + ", 95% CI " + str(ci95low.quantize(Decimal('.01'))) + " to " + str(ci95up.quantize(Decimal('.01'))) + "). Forest plot details: " + cdno + " Analysis " + ocstr
 
         picolist.append(tabtag("Narrative result", nresult))
-        picolist.append(tabtag("Risk of bias of studies", "The reviewers did not perform a GRADE assessment of the certainty of the evidence. Of the X studies, X (%) failed to report adequate allocation concealment and/or random sequence generation, X (%) did not report adequate blinding of participants/carers/outcome assessors and X (%) had high or unclear numbers of withdrawals."))
-        picolist.append(tabtag("Quality of the evidence", "The reviewers performed a GRADE assessment of the certainty of evidence for this outcome at this time point and stated that the evidence was [] certainty. See Summary of findings from Cochrane review"))
+        picolist.append(tabtag("Risk of bias of studies", "The reviewers did not perform a GRADE assessment of the quality/certainty of the evidence. Of the X studies, X (%) failed to report adequate allocation concealment and/or random sequence generation, X (%) did not report adequate blinding of participants/carers/outcome assessors and X (%) had high or unclear numbers of withdrawals."))
+        picolist.append(tabtag("Quality of the evidence", "The reviewers performed a GRADE assessment of the quality of evidence for this outcome at this time point and stated that the evidence was [] quality/certainty. See Summary of findings from Cochrane review"))
         picolist.append(tabtag("Quantitative result: relative effect or mean difference", qresult))
 
         picolist.append(tabtag("Quantitative result: absolute effect", abresult))
