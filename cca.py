@@ -908,7 +908,7 @@ def rm_dataparse(title, octitle, octype, name, intname, cntname, units, point, c
 
         picolist.append(tabtag("Narrative result", nresult))
         picolist.append(tabtag("Risk of bias of studies", "The reviewers did not perform a GRADE assessment of the quality/certainty of the evidence. Of the X studies, X (%) failed to report adequate allocation concealment and/or random sequence generation, X (%) did not report adequate blinding of participants/carers/outcome assessors and X (%) had high or unclear numbers of withdrawals."))
-        picolist.append(tabtag("Quality of the evidence", "The reviewers performed a GRADE assessment of the quality of evidence for this outcome at this time point and stated that the evidence was [] certainty. See Summary of Findings from Cochrane Review"))
+        picolist.append(tabtag("Quality of the evidence", "The reviewers performed a GRADE assessment of the quality of evidence for this outcome at this time point and stated that the evidence was [] certainty. See Summary of findings from Cochrane Review"))
         picolist.append(tabtag("Quantitative result: relative effect or mean difference", qresult))
 
         picolist.append(tabtag("Quantitative result: absolute effect", abresult))
