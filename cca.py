@@ -20,7 +20,6 @@ import random
 import collections
 import codecs
 import progressbar
-from csv import DictReader
 
 
 
@@ -123,23 +122,9 @@ ERROR_LOG = []
 
 
 
-# *** FUNCTIONS FOR PARSING THE BROWSE MENU ***
 
 
-def get_topic_filename():    
-    return os.path.join(PATH["rev"], "topics.csv")
 
-
-def parse_topics(filename):
-    " takes a csv file, parses, and returns a dict of sets of top level headings (in case more than one) "
-    topic_lookup = collections.defaultdict(set)
-
-    with open(filename, 'rU') as f:
-        csv_file = DictReader(f, dialect='excel')
-        for line in csv_file:
-            topic_lookup[line["CD Number"]].add(line["Level 1"])
-
-    return topic_lookup
 
 
 # *** FUNCTIONS FOR SIMPLE LANGUAGE PARSING ***
@@ -1006,7 +991,6 @@ def writefile(filename, txt):
 
 def main():
     files = glob.glob(os.path.join(PATH["rev"],  "*.rm5")) # get all reviews
-    topic_lookup = parse_topics(get_topic_filename())
     os.system("clear")
     print INTRO
 
@@ -1040,8 +1024,6 @@ def main():
             op.append(HTML_HEADER)
             op.append(tag("Cochrane Clinical Answers", "h3"))
 
-
-
             q = rm_title(xmldoc)
 
             (intname, cntname, cndname, popname, patternno) = splitter(mid_sent(q))
@@ -1060,7 +1042,6 @@ def main():
             op.append(tabtag(tag("Notes to Associate Editor from Cochrane Review " + cdno + " [not for publication]", "h3")))
             # print cdno
 
-            topic_headers = "; ".join(list(topic_lookup[cdno]))
 
 
             op.append(tabtag("Review title", q))
@@ -1088,14 +1069,9 @@ def main():
             op.append(TABLE_HEADER)
             op.append(tabtag(tag("Clinical question", "h4"), qu))
             op.append(tabtag("Clinical answer", " "))
-            op.append(tabtag("Abstract", "This Cochrane Clinical Answer evaluates %s in people with %s." % (intname, cndname)))
 
             # no longer needed
             # op.append(tabtag("Keywords", " "))
-
-            op.append(tabtag("Subject (1)", topic_headers))
-            op.append(tabtag("Subject (2)", " "))
-            op.append(tabtag("Subject (3)", " "))
 
             # no longer needed
             # op.append(tabtag("MeSH codes", " "))
@@ -1141,7 +1117,6 @@ def main():
             not_done_f.write("\n".join(not_done))
     print ""
     print "done!"
-    
 
 
 if __name__ == "__main__":
