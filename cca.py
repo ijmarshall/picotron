@@ -861,7 +861,7 @@ def rm_dataparse(title, octitle, octype, name, intname, cntname, units, point, c
             abresult = "n/a"
         elif type(point) == type(None):
             nresult = "No narrative result is available for this analysis. (The analysis includes multiple studies but no meta-analysis was conducted.)"
-            qresult = "The results from individual studies were: " + study_text + "; Forest plot details: " + cdno + " Analysis " + ocstr
+            qresult = "The results from individual studies were: " + study_text + ". Forest plot details: " + cdno + " Analysis " + ocstr
             abresult = "The absolute effect in each group cannot be calculated as data were not meta-analysed."
         else:
             nresult = rm_narrative(octype, intname, cntname, name, units, point, ci95low, ci95up, studies, participants, show_participants)
@@ -893,7 +893,7 @@ def rm_dataparse(title, octitle, octype, name, intname, cntname, units, point, c
 
         picolist.append(tabtag("Narrative result", nresult))
         picolist.append(tabtag("Risk of bias of studies", "The reviewers did not perform a GRADE assessment of the quality/certainty of the evidence. Of the X studies, X failed to report adequate allocation concealment and/or random sequence generation, X did not report adequate blinding of participants/carers/outcome assessors and X had high or unclear numbers of withdrawals."))
-        picolist.append(tabtag("Quality of the evidence", "The reviewers performed a GRADE assessment of the quality of evidence for this outcome at this time point and stated that the evidence was [] certainty. See Summary of findings from Cochrane Review"))
+        picolist.append(tabtag("Quality of the evidence", "Reviewers performed a GRADE assessment of the quality of this evidence and stated that it was [] certainty. See Summary of findings from Cochrane Review"))
         picolist.append(tabtag("Quantitative result: relative effect or mean difference", qresult))
 
         picolist.append(tabtag("Quantitative result: absolute effect", abresult))
